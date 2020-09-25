@@ -1,0 +1,21 @@
+.App {
+  text-align: center;
+}
+.container {
+  display: flex;
+  flex-flow: column wrap;
+  justify-content: center;
+  align-items: center;
+  margin: 0px auto;
+}
+ol{
+  text-align: left;
+}
+a {
+ text-decoration: none;
+}
+a:hover{
+  text-decoration: underline;
+  cursor: pointer;
+}
+
