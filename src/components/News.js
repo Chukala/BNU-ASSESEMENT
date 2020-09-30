@@ -8,8 +8,6 @@ class News extends Component {
     constructor(){
         super();
         this.state = {
-          allNews: [],
-          sortedNews: [],
           topTenNews: []
         }
         this.getNews = this.getNews.bind(this)
@@ -28,45 +26,56 @@ class News extends Component {
         }
         return topTenNews
     }
-     
+
+    removeDuplicates = (items) => {
+      return items.filter((a, b) => items.indexOf(a) === b);
+    }
+    
+    sortItems = (items) => {
+        return items.sort((a, b) => (b.pubDate - a.pubDate));
+    }
+    
     /** do to the CORS security policy it was difficult to fetch the data from my browser and it tookes me 
      * time to figure out and I found in rss-parser documentation to use this proxy link
      * If you are running in the same network with the server may be it doesn't need the CORS_PROXY
      */
-
+     // async makes it always return a promis
+     // allows await to be used in it
     async getNews(){
+        let items = [];
         try {
-           const CORS_PROXY = "https://cors-anywhere.herokuapp.com/"
-           let urls = feeds
-           let newsFeeds = urls.feeds
+           const CORS_PROXY = "https://cors-anywhere.herokuapp.com/";
+           // urls array
+           const urls = feeds.feeds;
+            // instantiate new parser object 
            const parser = new Parser();
-           let items =[];
-           for(let i = 0; i < newsFeeds.length; i++){
-               const url = newsFeeds[i];
-               const feed = await parser.parseURL(CORS_PROXY + url);
-               await Promise.all(feed.items.map(async (currentItem) => {
-                   if(items.filter((item) => item === currentItem.length) <=1){
-                       items.push(currentItem)
-                   }
-               }));
-               /** sort each item based on pubished date  and stored in sorted array*/
-                 let sortedItems = items.sort((a, b) => b.pubDate - a.pubDate)
-               /** set the state of all fetched items object, sorted array and top ten news returned from 
-                * top Ten sorted news function
-                */
-               this.setState({
-                allNews: items,
-                sortedNews: sortedItems,
-                topTenNews: this.topTenSortedNews(sortedItems)
-              })
-           } 
-            
-        } catch (error) {
-            console.log(error.message)
-        }
+            //request a promise for each url and resolve a promise for all requested promise
+           const feed = urls.map(url => parser.parseURL(CORS_PROXY + url));
+            //resolve all promises asynchronously and filter the item is not dublicated and store on the items array for each is not asynchrounous
+            await Promise.all(feed)
+                .then(results => {
+                    results.forEach((result) => {
+                        items.push(...result.items)
+                    });
+                })
+                .catch(err => console.log(err.reason)); 
+
+            //removes dublicate   
+            this.removeDuplicates (items);
+            this.sortItems(items);
+            /**set the state of all fetched items object, sorted array and 
+             * top ten news returned from top Ten sorted news function */
+            this.setState({
+                topTenNews: this.topTenSortedNews(items)
+            })                 
+        } catch (err) {
+            console.log(err)
+        }   
+        return items 
     }
     
     render() {
+        //console.log(this.state.topTenNews)
         /** display only the top ten news */
         const displayNews = this.state.topTenNews.map((news,i) => {
             return <SingleNews news={news} key={i} />
@@ -74,7 +83,11 @@ class News extends Component {
               
         return (
             <div className="container">
-                <ol>{displayNews}</ol>
+                { this.state.topTenNews.length === 0 ? 
+                    <div className="lds-ring"><div></div><div></div><div></div><div></div></div> : 
+                    <ol>{displayNews} </ol>
+                }
+                 
             </div>
         )
     }
